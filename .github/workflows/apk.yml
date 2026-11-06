@@ -1,1 +1,94 @@
+name: Gerar APK do JW Programa
 
+on:
+  workflow_dispatch:
+  push:
+    tags: ['apk-*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+
+      - name: Preparar ficheiros da app (www)
+        run: |
+          mkdir -p www
+          for f in index.html style.css app.js manifest.json 192.png 512.png apk-bridge.js; do
+            [ -f "$f" ] && cp "$f" www/ || echo "aviso: $f não existe"
+          done
+          # a ponte do APK carrega antes do app.js
+          sed -i 's#<script src="app.js"></script>#<script src="apk-bridge.js"></script>\n    <script src="app.js"></script>#' www/index.html
+          # a política de segurança do site não serve dentro do APK
+          sed -i '/Content-Security-Policy/d' www/index.html
+          grep -n "apk-bridge" www/index.html
+
+      - name: Instalar Capacitor e criar projeto Android
+        run: |
+          npm install
+          npx cap add android
+          npx cap sync android
+
+      - name: Instalar ImageMagick
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y imagemagick
+
+      - name: Plugin nativo, cores e ícone
+        run: |
+          cp android-extra/*.java android/app/src/main/java/com/aldair/jwprograma/
+          M=android/app/src/main/AndroidManifest.xml
+          sed -i 's#<application#<uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />\n    <application#' $M
+          S=android/app/src/main/res/values/styles.xml
+          sed -i 's#<style name="AppTheme.NoActionBar"[^>]*>#&\n        <item name="android:statusBarColor">\#1e3a8a</item>\n        <item name="android:windowLightStatusBar">false</item>#' $S
+          if [ -f 512.png ]; then
+            for d in mdpi:48 hdpi:72 xhdpi:96 xxhdpi:144 xxxhdpi:192; do
+              dir=android/app/src/main/res/mipmap-${d%%:*}; px=${d##*:}
+              for n in ic_launcher ic_launcher_round ic_launcher_foreground; do
+                convert 512.png -resize ${px}x${px} $dir/$n.png
+              done
+            done
+            rm -f android/app/src/main/res/mipmap-anydpi-v26/ic_launcher*.xml
+          fi
+
+      - name: Assinar e compilar o APK
+        run: |
+          if [ -n "${{ secrets.KEYSTORE_B64 }}" ]; then
+            echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > android/app/jw.keystore
+            SP="${{ secrets.KEYSTORE_PASSWORD }}"
+          else
+            echo "AVISO: sem chave guardada, a usar chave temporária (não serve para atualizar a app)"
+            SP="temporaria123"
+            keytool -genkeypair -keystore android/app/jw.keystore -alias batuque -keyalg RSA -keysize 2048 -validity 10000 -storepass $SP -keypass $SP -dname "CN=JW Programa"
+          fi
+          cat >> android/app/build.gradle <<GRADLE
+
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("jw.keystore")
+                      storePassword "$SP"
+                      keyAlias "batuque"
+                      keyPassword "$SP"
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                      minifyEnabled false
+                  }
+              }
+          }
+          GRADLE
+          cd android && chmod +x gradlew && ./gradlew assembleRelease --no-daemon
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: JW-Programa-APK
+          path: android/app/build/outputs/apk/release/*.apk
