@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JW Programa</title>
+    <link rel="stylesheet" href="style.css">
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; manifest-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <link rel="manifest" href="manifest.json">
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="header-left">
+                <!-- Botão de Voltar (Seta <) -->
+                <button id="back-btn" onclick="goBack()" title="Voltar" style="display: none;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="m15 18-6-6 6-6"/></svg>
+                </button>
+                <!-- Logotipo com JW no quadrado -->
+                <div class="logo-container">
+                    <span class="logo-square">JW</span>
+                    <span class="logo-text">Programa</span>
+                </div>
+            </div>
+            
+            <div class="header-right-actions">
+                <!-- Botão Estudantes (Aparece na aba Revisitas) -->
+                <button id="estudantes-btn" onclick="toggleEstudantesView()" title="Estudantes" style="display: none;">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
+                </button>
+                <!-- Botão Pesquisar (Lupa) -->
+                <button id="search-btn" onclick="openSearchModal()" title="Pesquisar">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                </button>
+                <!-- Foto de perfil -->
+                <button id="perfil-btn" type="button" onclick="abrirPerfil()" title="Perfil" aria-label="Perfil">
+                    <span id="perfil-avatar" class="avatar"></span>
+                </button>
+                <button id="menu-btn" onclick="toggleMenu()" title="Menu">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+                </button>
+            </div>
+        </div>
+        <!-- Menu Desdobrável -->
+        <div id="dropdown-menu" class="dropdown-menu">
+            <a href="#" onclick="openSection('programa')">Visão geral</a>
+            <a href="#" onclick="openSection('relatorio')">Relatório de campo</a>
+            <a href="#" onclick="openSection('lembretes')">Agenda</a>
+            <a href="#" onclick="openSection('configuracao')">Configuração</a>
+            <a href="#" onclick="openSection('termos')">Termo de uso</a>
+            <a href="#" onclick="openSection('privacidade')">Política de privacidade</a>
+        </div>
+    </header>
+
+    <!-- Modal de Pesquisa Global -->
+    <div id="search-modal" class="modal" style="display: none;">
+        <div class="modal-content card">
+            <h3>Pesquisar no Aplicativo</h3>
+            <input type="text" id="search-input" placeholder="Digite nome, assunto ou morada..." oninput="performSearch(this.value)">
+            <div id="search-results" style="max-height: 250px; overflow-y: auto; margin-top: 10px;">
+                <p style="color: #64748b; font-size: 0.9rem;">Comece a digitar para ver os resultados...</p>
+            </div>
+            <button type="button" onclick="closeSearchModal()" style="margin-top: 15px; background-color: #64748b;">Fechar</button>
+        </div>
+    </div>
+
+    <main id="app-container">
+        <!-- Secção: Início -->
+        <section id="inicio" class="tab-content active">
+            <!-- 1. Calendário no Topo -->
+            <div class="calendar-card">
+                <div class="cal-icon">📅</div>
+                <div class="cal-info">
+                    <span id="current-date-text">Carregando data...</span>
+                </div>
+            </div>
+
+            <!-- 2. Resumo da Semana (Dinâmico) -->
+            <div class="card event-summary-card">
+                <h3>Resumo da Semana & Agenda</h3>
+                <div id="dynamic-agenda-container">
+                    <!-- Os eventos dinâmicos serão injetados aqui -->
+                </div>
+            </div>
+
+            <!-- 3. Grelha 2x2 de Cartões -->
+            <div class="dashboard-grid">
+                <div class="dash-card" onclick="switchTab('reunioes')">
+                    <div class="dash-icon">👥</div>
+                    <span>Reuniões</span>
+                </div>
+                <div class="dash-card" onclick="switchTab('pregacao')">
+                    <div class="dash-icon">🗺️</div>
+                    <span>Pregação</span>
+                </div>
+                <div class="dash-card" onclick="openSection('superintendente')">
+                    <div class="dash-icon">🏛️</div>
+                    <span>Visita do S.C</span>
+                </div>
+                <div class="dash-card" onclick="switchTab('revisitas')">
+                    <div class="dash-icon">💬</div>
+                    <span>Revisitas</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Secção: Reunião -->
+        <section id="reunioes" class="tab-content">
+            <div id="reunioes-main-view">
+                <h2>Programas das Reuniões</h2>
+                <div class="sem-nav">
+                    <button type="button" onclick="reunMudarMes(-1)" aria-label="Mês anterior">◄</button>
+                    <span id="reun-mes-titulo">-</span>
+                    <button type="button" onclick="reunMudarMes(1)" aria-label="Mês seguinte">►</button>
+                </div>
+                <div id="reun-semanas" class="sem-chips"></div>
+                <p id="reun-sem-nome" class="sem-nome">-</p>
+                <div class="sem-acoes">
+                    <button type="button" class="btn-mini" onclick="reunIrHoje()">📅 Esta semana</button>
+                    <button type="button" class="btn-mini" onclick="reunCopiarAbrir()">📋 Copiar para outras semanas</button>
+                </div>
+                <div id="reun-sel-bar" class="sel-bar" style="display:none">
+                    <button type="button" class="sel-cancel" onclick="reunSelSair()" aria-label="Cancelar seleção">✕</button>
+                    <span id="reun-sel-count">0 selecionada(s)</span>
+                    <button type="button" class="sel-apagar" onclick="reunSelApagar()">🗑️ Apagar</button>
+                </div>
+                <div class="meeting-list">
+                    <div class="card clickable-card reun-card" id="card-reun-meio" data-reun="meio">
+                        <input type="checkbox" class="sel-check" tabindex="-1" aria-label="Selecionar">
+                        <h3>Reunião do meio de semana</h3>
+                        <div class="reun-linha">
+                            <div class="reun-col"><strong>Presidente</strong><span id="prev-pres-meio">-</span></div>
+                            <div class="reun-col"><strong>Discurso</strong><span id="prev-tesouros">-</span></div>
+                        </div>
+                    </div>
+                    <div class="card clickable-card reun-card" id="card-reun-fim" data-reun="fim">
+                        <input type="checkbox" class="sel-check" tabindex="-1" aria-label="Selecionar">
+                        <h3>Reunião do fim de semana</h3>
+                        <div class="reun-linha">
+                            <div class="reun-col"><strong>Presidente</strong><span id="prev-pres-fim">-</span></div>
+                            <div class="reun-col"><strong>Discurso público</strong><span id="prev-discurso">-</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Detalhe: Meio de Semana -->
+            <div id="detalhe-meio-view" class="sub-view" style="display: none;">
+                <h2>Reunião do Meio de Semana</h2>
+                <p class="sem-info"></p>
+                <div class="card">
+                    <p><strong>Dia e hora da reunião:</strong> <span id="det-dia-hora-meio">-</span></p>
+                    <p><strong>Presidente:</strong> <span id="det-pres-meio">-</span></p>
+                    <p><strong>Oração inicial:</strong> <span id="det-oracao-ini-meio">-</span></p>
+                    
+                    <div class="section-box section-tesouros">
+                        <h4>💎 Tesouros da Palavra de Deus</h4>
+                        <p><strong>Discurso:</strong> <span id="det-t-disc">-</span></p>
+                        <p><strong>Pérola Espiritual:</strong> <span id="det-t-perola">-</span></p>
+                        <p><strong>Leitura Bíblica:</strong> <span id="det-t-leit">-</span></p>
+                    </div>
+
+                    <div class="section-box section-empenhese">
+                        <h4>🌱 Empenhe-se no Ministério</h4>
+                        <p><strong>Parte 1:</strong> <span id="det-emp-1">-</span></p>
+                        <p><strong>Parte 2:</strong> <span id="det-emp-2">-</span></p>
+                        <p><strong>Parte 3:</strong> <span id="det-emp-3">-</span></p>
+                        <p><strong>Parte 4:</strong> <span id="det-emp-4">-</span></p>
+                        <p><strong>Parte 5:</strong> <span id="det-emp-5">-</span></p>
+                    </div>
+
+                    <div class="section-box section-viver">
+                        <h4>❤️ Viver como Cristão</h4>
+                        <p><strong>Parte 1:</strong> <span id="det-viv-1">-</span></p>
+                        <p><strong>Parte 2:</strong> <span id="det-viv-2">-</span></p>
+                        <p><strong>Parte 3:</strong> <span id="det-viv-3">-</span></p>
+                    </div>
+
+                    <div style="margin-top: 12px; padding: 10px; background: #f8fafc; border-radius: 6px;">
+                        <h4>📖 Estudo Bíblico de Congregação</h4>
+                        <p><strong>Dirigente:</strong> <span id="det-est-dir">-</span></p>
+                        <p><strong>Leitor:</strong> <span id="det-est-leit">-</span></p>
+                    </div>
+
+                    <p style="margin-top: 12px;"><strong>Oração final:</strong> <span id="det-oracao-fim-meio">-</span></p>
+                </div>
+            </div>
+
+            <!-- Detalhe: Fim de Semana -->
+            <div id="detalhe-fim-view" class="sub-view" style="display: none;">
+                <h2>Reunião de Fim de Semana</h2>
+                <p class="sem-info"></p>
+                <div class="card">
+                    <p><strong>Dia e hora da reunião:</strong> <span id="det-dia-hora-fim">-</span></p>
+                    <p><strong>Presidente:</strong> <span id="det-pres-fim">-</span></p>
+                    <p><strong>Oração inicial:</strong> <span id="det-oracao-ini-fim">-</span></p>
+
+                    <div class="section-box section-discurso">
+                        <h4>🎤 Discurso Público</h4>
+                        <p><strong>Orador:</strong> <span id="det-f-orador">-</span></p>
+                        <p><strong>Tema:</strong> <span id="det-f-tema">-</span></p>
+                    </div>
+
+                    <div class="section-box section-sentinela">
+                        <h4>📚 Estudo de A Sentinela</h4>
+                        <p><strong>Dirigente:</strong> <span id="det-sent-dir">-</span></p>
+                        <p><strong>Leitor:</strong> <span id="det-sent-leit">-</span></p>
+                    </div>
+
+                    <p style="margin-top: 12px;"><strong>Oração final:</strong> <span id="det-oracao-fim-fim">-</span></p>
+                </div>
+            </div>
+
+            <!-- Edição: Meio de Semana -->
+            <div id="edit-meio-view" class="sub-view" style="display: none;">
+                <h2>Editar Reunião do Meio de Semana</h2>
+                <p class="sem-info"></p>
+                <div class="card">
+                    <label>Dia e hora da reunião:</label>
+                    <div class="dia-hora-row">
+                        <select id="edit-dia-meio">
+                            <option value="">Dia da semana</option>
+                            <option value="Segunda-feira">Segunda-feira</option>
+                            <option value="Terça-feira">Terça-feira</option>
+                            <option value="Quarta-feira">Quarta-feira</option>
+                            <option value="Quinta-feira">Quinta-feira</option>
+                            <option value="Sexta-feira">Sexta-feira</option>
+                            <option value="Sábado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                        </select>
+                        <input type="time" id="edit-hora-meio">
+                    </div>
+
+                    <label>Presidente:</label>
+                    <input type="text" id="edit-presidente-meio" placeholder="Nome do presidente...">
+
+                    <label>Oração inicial:</label>
+                    <input type="text" id="edit-oracao-ini-meio" placeholder="Quem fará a oração...">
+
+                    <h4 style="margin-top:12px; color:#166534;">- Tesouros da Palavra de Deus -</h4>
+                    <label>Discurso:</label>
+                    <input type="text" id="edit-t-disc" placeholder="Tema / Irmão...">
+                    <label>Pérola Espiritual:</label>
+                    <input type="text" id="edit-t-perola" placeholder="Tema / Irmão...">
+                    <label>Leitura Bíblica:</label>
+                    <input type="text" id="edit-t-leit" placeholder="Leitura / Irmão...">
+
+                    <h4 style="margin-top:12px; color:#1e40af;">- Empenhe-se no Ministério -</h4>
+                    <label>Parte 1:</label>
+                    <input type="text" id="edit-emp-1" placeholder="Detalhes parte 1...">
+                    <label>Parte 2:</label>
+                    <input type="text" id="edit-emp-2" placeholder="Detalhes parte 2...">
+                    <label>Parte 3:</label>
+                    <input type="text" id="edit-emp-3" placeholder="Detalhes parte 3...">
+                    <label>Parte 4:</label>
+                    <input type="text" id="edit-emp-4" placeholder="Detalhes parte 4...">
+                    <label>Parte 5:</label>
+                    <input type="text" id="edit-emp-5" placeholder="Detalhes parte 5...">
+
+                    <h4 style="margin-top:12px; color:#991b1b;">- Viver como Cristão -</h4>
+                    <label>Parte 1:</label>
+                    <input type="text" id="edit-viv-1" placeholder="Detalhes parte 1...">
+                    <label>Parte 2:</label>
+                    <input type="text" id="edit-viv-2" placeholder="Detalhes parte 2...">
+                    <label>Parte 3:</label>
+                    <input type="text" id="edit-viv-3" placeholder="Detalhes parte 3...">
+
+                    <h4 style="margin-top:12px; color:#1e3a8a;">- Estudo de Congregação -</h4>
+                    <label>Dirigente:</label>
+                    <input type="text" id="edit-est-dir" placeholder="Dirigente...">
+                    <label>Leitor:</label>
+                    <input type="text" id="edit-est-leit" placeholder="Leitor...">
+
+                    <label style="margin-top:10px;">Oração final:</label>
+                    <input type="text" id="edit-oracao-fim-meio" placeholder="Quem fará a oração...">
+
+                    <label class="desig-card" style="margin-top:14px;">
+                        <input type="checkbox" id="aplicar-dh-meio">
+                        <div><strong>Aplicar este dia e hora a todas as semanas do mês</strong></div>
+                    </label>
+                    <button type="button" onclick="saveMeeting('meio')" style="margin-top:15px;">Salvar Alterações</button>
+                </div>
+            </div>
+
+            <!-- Edição: Fim de Semana -->
+            <div id="edit-fim-view" class="sub-view" style="display: none;">
+                <h2>Editar Reunião de Fim de Semana</h2>
+                <p class="sem-info"></p>
+                <div class="card">
+                    <label>Dia e hora da reunião:</label>
+                    <div class="dia-hora-row">
+                        <select id="edit-dia-fim">
+                            <option value="">Dia da semana</option>
+                            <option value="Segunda-feira">Segunda-feira</option>
+                            <option value="Terça-feira">Terça-feira</option>
+                            <option value="Quarta-feira">Quarta-feira</option>
+                            <option value="Quinta-feira">Quinta-feira</option>
+                            <option value="Sexta-feira">Sexta-feira</option>
+                            <option value="Sábado">Sábado</option>
+                            <option value="Domingo">Domingo</option>
+                        </select>
+                        <input type="time" id="edit-hora-fim">
+                    </div>
+
+                    <label>Presidente:</label>
+                    <input type="text" id="edit-presidente-fim" placeholder="Nome do presidente...">
+
+                    <label>Oração inicial:</label>
+                    <input type="text" id="edit-oracao-ini-fim" placeholder="Quem fará a oração...">
+
+                    <h4 style="margin-top:12px; color:#166534;">- Discurso Público -</h4>
+                    <label>Orador:</label>
+                    <input type="text" id="edit-f-orador" placeholder="Orador / Congregação...">
+                    <label>Tema:</label>
+                    <input type="text" id="edit-f-tema" placeholder="Tema do discurso...">
+
+                    <h4 style="margin-top:12px; color:#991b1b;">- Estudo de A Sentinela -</h4>
+                    <label>Dirigente:</label>
+                    <input type="text" id="edit-sent-dir" placeholder="Dirigente...">
+                    <label>Leitor:</label>
+                    <input type="text" id="edit-sent-leit" placeholder="Leitor...">
+
+                    <label style="margin-top:10px;">Oração final:</label>
+                    <input type="text" id="edit-oracao-fim-fim" placeholder="Quem fará a oração...">
+
+                    <label class="desig-card" style="margin-top:14px;">
+                        <input type="checkbox" id="aplicar-dh-fim">
+                        <div><strong>Aplicar este dia e hora a todas as semanas do mês</strong></div>
+                    </label>
+                    <button type="button" onclick="saveMeeting('fim')" style="margin-top:15px;">Salvar Alterações</button>
+                </div>
+            </div>
+
+            <!-- Botão Flutuante (FAB) "+" -->
+            <div id="fab-container" class="fab-container">
+                <div id="fab-menu" class="fab-menu">
+                    <a href="#" onclick="openEditMeeting('meio')">Editar reunião do meio de semana</a>
+                    <a href="#" onclick="openEditMeeting('fim')">Editar reunião de fim de semana</a>
+                </div>
+                <button id="fab-btn" onclick="toggleFabMenu()">+</button>
+            </div>
+        </section>
+
+        <!-- Secção: Revisitas -->
+        <section id="revisitas" class="tab-content">
+            <!-- Vista da Lista de Revisitas -->
+            <div id="revisitas-main-view">
+                <div class="section-header-row">
+                    <h2>Revisitas</h2>
+                    <button class="add-item-btn" onclick="openRevisitaForm()">+ Nova Revisita</button>
+                </div>
+                <div id="lista-revisitas-container" style="margin-top: 15px;">
+                    <!-- Lista injetada via JS -->
+                </div>
+            </div>
+
+            <!-- Formulário de Nova/Editar Revisita -->
+            <div id="revisita-form-view" style="display: none;">
+                <h2 id="form-revisita-titulo">Registar Revisita</h2>
+                <div class="card">
+                    <form id="revisita-form" onsubmit="saveRevisita(event)">
+                        <input type="hidden" id="rev-id">
+                        
+                        <h4 style="color: #1e3a8a; margin-bottom: 8px;">- Dados do Morador -</h4>
+                        <label>Nome:</label>
+                        <input type="text" id="rev-nome" required placeholder="Nome do morador">
+                        <label>Morada:</label>
+                        <input type="text" id="rev-morada" placeholder="Endereço / Morada">
+                        <label>Telefone:</label>
+                        <input type="tel" id="rev-telefone" placeholder="Contacto telefónico">
+
+                        <h4 style="color: #1e3a8a; margin: 15px 0 8px 0;">- Dados para o Publicador -</h4>
+                        <label>Assunto à considerar:</label>
+                        <input type="text" id="rev-assunto" placeholder="Ex: O Reino de Deus">
+                        <label>Texto à ser lido:</label>
+                        <input type="text" id="rev-texto" placeholder="Ex: Apocalipse 21:3, 4">
+                        <label>Dia e hora:</label>
+                        <input type="datetime-local" id="rev-datahora">
+                        <label>Nota:</label>
+                        <textarea id="rev-nota" placeholder="Anotações importantes..."></textarea>
+                        
+                        <div class="checkbox-container">
+                            <input type="checkbox" id="rev-concluido">
+                            <label for="rev-concluido" class="checkbox-label">Revisita concluído</label>
+                        </div>
+
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button type="submit">Salvar Revisita</button>
+                            <button type="button" onclick="closeRevisitaForm()" style="background-color: #64748b;">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Ecrã de Estudantes -->
+            <div id="estudantes-view" style="display: none;">
+                <div class="section-header-row">
+                    <h2>Estudantes da Bíblia</h2>
+                    <button class="add-item-btn" onclick="openEstudanteForm()">+ Novo Estudante</button>
+                </div>
+                <!-- Mês a que se referem as caixinhas "Estudou em ..." -->
+                <div class="card" style="margin-top: 15px;">
+                    <div class="cal-head">
+                        <button type="button" class="cal-nav" onclick="mudarMesEstudantes(-1)" aria-label="Mês anterior">◄</button>
+                        <div id="est-mes-titulo" class="cal-titulo">-</div>
+                        <button type="button" class="cal-nav" onclick="mudarMesEstudantes(1)" aria-label="Mês seguinte">►</button>
+                    </div>
+                    <p class="cal-hint">Marque os estudantes a quem foram dirigidos estudos neste mês. O relatório conta quantos estão marcados.</p>
+                </div>
+                <div id="lista-estudantes-container" style="margin-top: 15px;">
+                    <!-- Lista de estudantes injetada via JS -->
+                </div>
+
+                <!-- Formulário de Estudante (Modal) -->
+                <div id="estudante-form-modal" class="modal" style="display: none;">
+                    <div class="modal-content card">
+                        <h3 id="form-estudante-titulo">Registar Estudante</h3>
+                        <input type="hidden" id="est-id">
+                        <label>Nome:</label>
+                        <input type="text" id="est-nome" required placeholder="Nome do estudante">
+                        <label>Telefone:</label>
+                        <input type="tel" id="est-telefone" placeholder="Telefone">
+                        <label>Publicação de Estudo:</label>
+                        <input type="text" id="est-publicacao" placeholder="Ex: Seja Feliz para Sempre!">
+                        <label>Lição / Capítulo atual:</label>
+                        <input type="text" id="est-licao" placeholder="Ex: Lição 5">
+                        <div style="display: flex; gap: 10px; margin-top: 15px;">
+                            <button type="button" onclick="saveEstudante()">Salvar</button>
+                            <button type="button" onclick="closeEstudanteForm()" style="background-color: #64748b;">Cancelar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Secção: Pregação -->
+        <section id="pregacao" class="tab-content">
+            <!-- Ecrã "Meu Programa" (resultado guardado) -->
+            <div id="pregacao-lista-view">
+                <h2>Meu Programa</h2>
+                <div id="meu-programa-resultado"></div>
+
+                <!-- Botão flutuante "+" -->
+                <div class="fab-container">
+                    <button id="pregacao-fab-btn" type="button" onclick="openPregacaoEditor()" aria-label="Criar programa de pregação">+</button>
+                </div>
+            </div>
+
+            <!-- Editor: calendário + designação + resumo -->
+            <div id="pregacao-editor-view" style="display: none;">
+                <h2 id="editor-titulo">Criar programa</h2>
+
+                <!-- Calendário mensal -->
+                <div class="card">
+                    <div class="cal-head">
+                        <button type="button" class="cal-nav" onclick="mudarMes(-1)" aria-label="Mês anterior">◄</button>
+                        <div id="cal-titulo" class="cal-titulo">-</div>
+                        <button type="button" class="cal-nav" onclick="mudarMes(1)" aria-label="Mês seguinte">►</button>
+                    </div>
+                    <div id="cal-semana" class="cal-grid"></div>
+                    <div id="cal-dias" class="cal-grid"></div>
+                    <p class="cal-hint">Toque em Seg, Ter… para marcar esse dia em todas as semanas. Toque numa data para marcar ou desmarcar só esse dia.</p>
+                </div>
+
+                <!-- Designações -->
+                <h4 class="sec-label">Designação</h4>
+                <div class="designacao-list">
+                    <label class="desig-card">
+                        <input type="checkbox" name="designacao-chk" value="Regular" onclick="handleDesignationCheck('Regular', this)">
+                        <div>
+                            <strong>Pioneiro Regular</strong><br>
+                            <span>Meta: 50 h/mês</span>
+                        </div>
+                    </label>
+
+                    <label class="desig-card">
+                        <input type="checkbox" name="designacao-chk" value="Auxiliar" onclick="handleDesignationCheck('Auxiliar', this)">
+                        <div>
+                            <strong>Pioneiro Auxiliar</strong><br>
+                            <span>Meta: 30 h/mês (15 h em semana de visita do SC)</span>
+                        </div>
+                    </label>
+
+                    <label class="desig-card">
+                        <input type="checkbox" name="designacao-chk" value="Especial" onclick="handleDesignationCheck('Especial', this)">
+                        <div>
+                            <strong>Pioneiro Especial</strong><br>
+                            <span>Meta: 80 h/mês</span>
+                        </div>
+                    </label>
+                </div>
+
+                <!-- Resumo -->
+                <h4 class="sec-label">Resumo</h4>
+                <div id="resumo-pregacao" class="card resumo-card"></div>
+
+                <button type="button" onclick="savePrograma()" style="margin-top: 5px;">Salvar Programa</button>
+            </div>
+        </section>
+
+        <!-- Secção: Visão Geral (Programa) -->
+        <section id="programa" class="tab-content">
+            <h2>Visão geral</h2>
+            <p id="vg-mes" class="vg-mes"></p>
+            <div id="visao-geral"></div>
+        </section>
+
+        <!-- Secção: Visita do Superintendente -->
+        <section id="superintendente" class="tab-content">
+            <!-- Programa da Visita (resultado guardado) -->
+            <div id="sc-lista-view">
+                <h2>Programa da Visita</h2>
+                <div id="sc-resultado"></div>
+
+                <!-- Botão flutuante "+" -->
+                <div class="fab-container">
+                    <button id="sc-fab-btn" type="button" onclick="openScOpcoes()" aria-label="Editar programa da visita">+</button>
+                </div>
+            </div>
+
+            <!-- Opções ao tocar em "+" -->
+            <div id="sc-opcoes-view" style="display: none;">
+                <h2>Editar programa</h2>
+                <button type="button" class="opcao-card" onclick="openScForm('reuniao')">
+                    <span class="opcao-icone">👥</span><span>Editar reunião</span>
+                </button>
+                <button type="button" class="opcao-card" onclick="openScForm('saida')">
+                    <span class="opcao-icone">🗺️</span><span>Editar saída de campo</span>
+                </button>
+                <button type="button" class="opcao-card" onclick="openScForm('refeicao')">
+                    <span class="opcao-icone">🍽️</span><span>Editar refeição</span>
+                </button>
+            </div>
+
+            <!-- Formulário (reunião, saída de campo ou refeição) -->
+            <div id="sc-form-view" style="display: none;">
+                <h2 id="sc-form-titulo">Editar reunião</h2>
+                <div class="card" id="sc-form-campos"></div>
+                <button type="button" onclick="saveScForm()" style="margin-bottom: 15px;">Salvar</button>
+            </div>
+        </section>
+
+        <!-- Secção: Relatório -->
+        <section id="relatorio" class="tab-content">
+            <!-- Ecrã "Meu Relatório" -->
+            <div id="rel-lista-view">
+                <h2>Meu Relatório</h2>
+
+                <!-- Cronómetro da pregação -->
+                <div class="card cron-card">
+                    <div class="cron-titulo">⏱️ Cronómetro da pregação</div>
+                    <div id="cron-tempo" class="cron-tempo">00:00:00</div>
+                    <div id="cron-estado" class="cron-estado">Parado</div>
+                    <div class="cron-botoes">
+                        <button type="button" id="cron-btn" onclick="cronToggle()">▶ Iniciar</button>
+                        <button type="button" id="cron-guardar" class="btn-guardar" onclick="cronGuardar()">💾 Guardar</button>
+                        <button type="button" id="cron-zerar" class="btn-secundario" onclick="cronZerar()">Zerar</button>
+                    </div>
+                    <p id="cron-destino" class="cron-destino"></p>
+                    <p class="cal-hint">Pause quando fizer algo que não faz parte da pregação. Ao guardar, o tempo é somado à atividade de hoje. O tempo conta mesmo com o ecrã bloqueado.</p>
+                </div>
+
+                <!-- Separadores -->
+                <div class="rel-abas">
+                    <button type="button" id="rel-aba-ativ" class="rel-aba ativa" onclick="setRelAba('ativ')">Atividade de campo</button>
+                    <button type="button" id="rel-aba-rel" class="rel-aba" onclick="setRelAba('rel')">Relatório de campo</button>
+                </div>
+                <div id="ativ-resultado"></div>
+                <div id="rel-resultado" style="display: none;"></div>
+
+                <!-- Botão flutuante "+" -->
+                <div class="fab-container">
+                    <button id="rel-fab-btn" type="button" onclick="openRelAdd()" aria-label="Adicionar">+</button>
+                </div>
+            </div>
+
+            <!-- Formulário do relatório -->
+            <div id="rel-form-view" style="display: none;">
+                <h2>Relatório de Campo</h2>
+                <div class="card">
+                    <label>Nome:</label>
+                    <input type="text" id="rel-nome" placeholder="Nome">
+                    <label>Mês:</label>
+                    <input type="month" id="rel-mes" onchange="relAutoPreencher()">
+                    <p id="rel-auto-hint" class="cal-hint"></p>
+                </div>
+
+                <h4 class="sec-label">Publicador</h4>
+                <div class="card">
+                    <label class="desig-card">
+                        <input type="checkbox" id="rel-participou" onclick="relParticipou()">
+                        <div><strong>Participou em atividade de campo</strong></div>
+                    </label>
+                    <label>Estudo dirigido:</label>
+                    <input type="number" id="rel-estudos-pub" min="0" inputmode="numeric" placeholder="Nº de estudos">
+                </div>
+
+                <h4 class="sec-label">Relatório de campo se for Pioneiro</h4>
+                <div class="card">
+                    <label>Designação:</label>
+                    <div class="designacao-list">
+                        <label class="desig-card">
+                            <input type="checkbox" id="rel-desig-Regular" onclick="relDesig('Regular')">
+                            <div><strong>Pioneiro Regular</strong></div>
+                        </label>
+                        <label class="desig-card">
+                            <input type="checkbox" id="rel-desig-Especial" onclick="relDesig('Especial')">
+                            <div><strong>Pioneiro Especial</strong></div>
+                        </label>
+                        <label class="desig-card">
+                            <input type="checkbox" id="rel-desig-Auxiliar" onclick="relDesig('Auxiliar')">
+                            <div><strong>Pioneiro Auxiliar</strong></div>
+                        </label>
+                    </div>
+                    <label>Hora:</label>
+                    <div class="hm-row">
+                        <div><input type="number" id="rel-horas" min="0" inputmode="numeric" placeholder="0"><span>horas</span></div>
+                        <div><input type="number" id="rel-minutos" min="0" max="59" inputmode="numeric" placeholder="0"><span>minutos</span></div>
+                    </div>
+                    <label>Estudo dirigido:</label>
+                    <input type="number" id="rel-estudos-pio" min="0" inputmode="numeric" placeholder="Nº de estudos">
+                    <label>Nota:</label>
+                    <textarea id="rel-nota" placeholder="Nota..."></textarea>
+                </div>
+
+                <button type="button" onclick="saveRelForm()" style="margin-bottom: 15px;">Salvar Relatório</button>
+            </div>
+
+            <!-- Formulário da atividade de campo (um dia) -->
+            <div id="ativ-form-view" style="display: none;">
+                <h2 id="ativ-form-titulo">Atividade de campo</h2>
+                <div class="card">
+                    <label>Data:</label>
+                    <input type="date" id="ativ-data">
+                    <label>Hora:</label>
+                    <div class="hm-row">
+                        <div><input type="number" id="ativ-horas" min="0" inputmode="numeric" placeholder="0"><span>horas</span></div>
+                        <div><input type="number" id="ativ-minutos" min="0" max="59" inputmode="numeric" placeholder="0"><span>minutos</span></div>
+                    </div>
+                    <label>Estudo dirigido (pessoas que estudaram neste dia):</label>
+                    <input type="number" id="ativ-estudos" min="0" inputmode="numeric" placeholder="Nº de pessoas">
+                    <p id="ativ-form-hint" class="cal-hint">Se já registou este dia, os valores são somados.</p>
+                </div>
+                <button type="button" onclick="saveAtivForm()" style="margin-bottom: 15px;">Salvar</button>
+            </div>
+
+            <!-- Mini modal do botão "+" -->
+            <div id="rel-add-modal" class="modal" style="display: none;" onclick="closeRelModais()">
+                <div class="mini-modal" onclick="event.stopPropagation()">
+                    <button type="button" class="mini-opcao" onclick="openAtivForm()">📋 Atividade de campo</button>
+                    <button type="button" class="mini-opcao" onclick="openRelForm()">📄 Relatório de campo</button>
+                </div>
+            </div>
+
+            <!-- Mini modal das atividades (três pontos) -->
+            <div id="ativ-menu-modal" class="modal" style="display: none;" onclick="closeRelModais()">
+                <div class="mini-modal" onclick="event.stopPropagation()">
+                    <button type="button" class="mini-opcao" onclick="editAtividade()">✏️ Editar</button>
+                    <button type="button" class="mini-opcao mini-perigo" onclick="deleteAtividade()">🗑️ Eliminar</button>
+                </div>
+            </div>
+
+            <!-- Mini modal do menu de três pontos -->
+            <div id="rel-menu-modal" class="modal" style="display: none;" onclick="closeRelModais()">
+                <div class="mini-modal" onclick="event.stopPropagation()">
+                    <button type="button" class="mini-opcao" onclick="shareRelatorio()">📤 Partilhar</button>
+                    <button type="button" class="mini-opcao mini-perigo" onclick="deleteRelatorio()">🗑️ Eliminar</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Secção: Lembretes -->
+        <section id="lembretes" class="tab-content">
+            <h2>Agenda</h2>
+            <div class="card">
+                <input type="text" id="novo-lembrete" placeholder="Novo compromisso ou lembrete...">
+                <label class="desig-card">
+                    <input type="checkbox" id="novo-lembrete-mostrar" checked>
+                    <div><strong>Mostrar agenda</strong><br><span>Aparece no resumo do ecrã Início</span></div>
+                </label>
+                <button id="add-lembrete" style="margin-top: 10px;">Adicionar</button>
+                <ul id="lista-lembretes"></ul>
+            </div>
+        </section>
+
+        <!-- Secção: Configuração -->
+        <section id="configuracao" class="tab-content">
+            <h2>Configuração</h2>
+
+            <h4 class="sec-label">Perfil</h4>
+            <div class="card">
+                <div class="cfg-foto">
+                    <span id="cfg-avatar" class="avatar grande"></span>
+                    <div class="cfg-foto-btns">
+                        <button type="button" class="btn-secundario-cfg" onclick="escolherFotoPerfil()">📷 Escolher foto</button>
+                        <button type="button" class="btn-secundario-cfg" id="cfg-foto-ajustar" onclick="ajustarFotoPerfil()">🔍 Ajustar zoom</button>
+                        <button type="button" class="btn-secundario-cfg" id="cfg-foto-remover" onclick="removerFotoPerfil()">🗑️ Remover foto</button>
+                    </div>
+                </div>
+                <label>Nome do publicador:</label>
+                <input type="text" id="cfg-nome" placeholder="O seu nome">
+                <button type="button" onclick="saveConfiguracao()">Salvar nome</button>
+                <p class="cal-hint">Usado para preencher o nome no Relatório de campo.</p>
+                <p id="cfg-designacao" class="cfg-linha"></p>
+                <p id="cfg-meta" class="cfg-linha"></p>
+                <p class="cal-hint">A designação define-se no ecrã Pregação.</p>
+            </div>
+
+            <h4 class="sec-label">Cópia de segurança</h4>
+            <div class="card">
+                <p class="cal-hint" style="margin-top: 0;">Os dados ficam só neste dispositivo. Envie uma cópia para fora do telemóvel (Google Drive, WhatsApp, email) para não os perder.</p>
+                <p id="cfg-ultima-copia" class="cfg-linha"></p>
+                <button type="button" onclick="partilharCopia()">📤 Partilhar cópia (Drive, WhatsApp…)</button>
+                <button type="button" class="btn-secundario-cfg" onclick="exportarDados()">💾 Guardar ficheiro no telemóvel</button>
+                <button type="button" class="btn-secundario-cfg" onclick="byId('cfg-ficheiro').click()">📥 Restaurar dados</button>
+                <input type="file" id="cfg-ficheiro" accept=".json,.txt,application/json,text/plain" style="display: none;" onchange="importarDados(this)">
+                <button type="button" class="btn-danger" onclick="apagarTudo()">🗑️ Apagar todos os dados</button>
+                <label class="desig-card" style="margin-top: 12px;">
+                    <input type="checkbox" id="cfg-i-copia" onchange="cfgMudou()">
+                    <div><strong>Lembrar-me de fazer a cópia</strong><br><span>Aviso no Início quando passar 1 semana sem cópia</span></div>
+                </label>
+            </div>
+
+            <h4 class="sec-label">Proteção do armazenamento</h4>
+            <div class="card">
+                <p id="cfg-protegido" class="cfg-linha">A verificar…</p>
+                <p id="cfg-instalada" class="cfg-linha"></p>
+                <button type="button" id="cfg-pedir-protecao" class="btn-secundario-cfg" onclick="pedirProtecao()" style="display: none;">🛡️ Pedir proteção ao Chrome</button>
+                <p class="cal-hint">Com a proteção, o Chrome não apaga os dados sozinho quando o telemóvel fica com pouco espaço. Não protege se limpar "Cookies e dados do site" — para isso, use a cópia de segurança.</p>
+            </div>
+
+            <h4 class="sec-label">Ecrã Início</h4>
+            <div class="card">
+                <p class="cal-hint" style="margin-top: 0;">Escolha o que aparece no resumo do Início.</p>
+                <label class="desig-card">
+                    <input type="checkbox" id="cfg-i-reuniao" onchange="cfgMudou()">
+                    <div><strong>Reunião de hoje</strong><br><span>Dia e hora da reunião da semana</span></div>
+                </label>
+                <label class="desig-card">
+                    <input type="checkbox" id="cfg-i-visitasc" onchange="cfgMudou()">
+                    <div><strong>Visita do S.C</strong><br><span>Reuniões da visita, no dia em que acontecem</span></div>
+                </label>
+                <label class="desig-card">
+                    <input type="checkbox" id="cfg-i-revisitas" onchange="cfgMudou()">
+                    <div><strong>Revisitas</strong><br><span>Revisitas com data marcada</span></div>
+                </label>
+                <label class="desig-card">
+                    <input type="checkbox" id="cfg-i-agenda" onchange="cfgMudou()">
+                    <div><strong>Agenda</strong><br><span>Itens com "Mostrar agenda" marcado</span></div>
+                </label>
+                <label>Itens da agenda no Início:</label>
+                <select id="cfg-i-agendamax" onchange="cfgMudou()">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                    <option value="3">3</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                </select>
+            </div>
+
+            <h4 class="sec-label">Relatório</h4>
+            <div class="card">
+                <label class="desig-card">
+                    <input type="checkbox" id="cfg-i-aviso" onchange="cfgMudou()">
+                    <div><strong>Avisar para entregar o relatório</strong><br><span>Aparece no Início de 25 a 5, enquanto o relatório do mês não estiver guardado</span></div>
+                </label>
+            </div>
+
+            <h4 class="sec-label">Aparência</h4>
+            <div class="card">
+                <label>Tamanho do texto:</label>
+                <select id="cfg-texto" onchange="cfgMudou()">
+                    <option value="normal">Normal</option>
+                    <option value="grande">Grande</option>
+                    <option value="muito">Muito grande</option>
+                </select>
+                <label>Tema:</label>
+                <select id="cfg-tema" onchange="cfgMudou()">
+                    <option value="claro">Claro</option>
+                    <option value="escuro">Escuro</option>
+                    <option value="auto">Automático (como o telemóvel)</option>
+                </select>
+                <label class="desig-card">
+                    <input type="checkbox" id="cfg-telacheia" onchange="cfgMudou()">
+                    <div><strong>Modo tela cheia</strong><br><span>Abre o app em tela cheia (começa no primeiro toque ao abrir)</span></div>
+                </label>
+            </div>
+
+            <h4 class="sec-label">Sobre</h4>
+            <div class="card">
+                <p class="cfg-linha"><strong>JW Programa</strong> · versão <span id="cfg-versao"></span></p>
+                <button type="button" class="btn-secundario-cfg" onclick="openSection('termos')">Termo de uso</button>
+                <button type="button" class="btn-secundario-cfg" onclick="openSection('privacidade')">Política de privacidade</button>
+                <button type="button" onclick="atualizarApp()">🔄 Atualizar app</button>
+                <button type="button" class="btn-secundario-cfg" onclick="verificarInstalacao()">🔎 Verificar instalação</button>
+                <p class="cal-hint">Atualizar app recarrega os ficheiros mais recentes. Os seus dados não são apagados.</p>
+            </div>
+        </section>
+
+        <!-- Secção: Termo de uso -->
+        <section id="termos" class="tab-content">
+            <h2>Termo de uso</h2>
+            <div class="card texto-legal">
+                <h4>1. Sobre a aplicação</h4>
+                <p>O JW Programa é uma ferramenta pessoal para organizar programas de reuniões, pregação, visita do superintendente de circuito, revisitas, estudantes da Bíblia, atividade e relatório de campo e agenda.</p>
+                <p>Esta aplicação é um projeto independente, criado por um programador particular. <strong>Não foi criada, desenvolvida, patrocinada nem aprovada pelas Testemunhas de Jeová</strong> nem por qualquer das suas organizações, e não é um recurso oficial.</p>
+                <p>Por isso, <strong>não contacte a organização das Testemunhas de Jeová, as congregações nem os anciãos para obter informações, apoio ou esclarecimentos sobre esta aplicação</strong>: eles não a conhecem nem são responsáveis por ela. Dúvidas ou sugestões devem ser dirigidas apenas ao programador.</p>
+                <h4>2. Utilização</h4>
+                <p>A aplicação destina-se a uso pessoal. Cada utilizador é responsável pela informação que regista e pelo uso que faz dela, incluindo os dados de outras pessoas, como estudantes e revisitas.</p>
+                <h4>3. Dados e funcionamento offline</h4>
+                <p>A informação fica guardada no próprio dispositivo. Se limpar os dados do navegador, desinstalar a aplicação ou mudar de dispositivo, essa informação pode perder-se. Partilhe os seus relatórios para ter uma cópia.</p>
+                <h4>4. Sem garantias</h4>
+                <p>A aplicação é fornecida tal como está, sem garantia de funcionamento contínuo ou livre de erros. Confirme sempre horários e dados importantes. O programador não se responsabiliza por perdas de dados ou por decisões tomadas com base na informação apresentada.</p>
+                <h4>5. Alterações</h4>
+                <p>Este termo e a aplicação podem ser atualizados. Continuar a usar a aplicação significa aceitar a versão em vigor.</p>
+            </div>
+        </section>
+
+        <!-- Secção: Política de privacidade -->
+        <section id="privacidade" class="tab-content">
+            <h2>Política de privacidade</h2>
+            <div class="card texto-legal">
+                <h4>1. Que dados a aplicação guarda</h4>
+                <p>Apenas o que você escrever: programas e designações, dados de revisitas e estudantes (nome, telefone, publicação), atividades e relatórios de campo, agenda e configurações.</p>
+                <h4>2. Onde ficam guardados</h4>
+                <p>Exclusivamente no armazenamento local do seu dispositivo (navegador). A aplicação não tem conta de utilizador e não envia os seus dados para nenhum servidor.</p>
+                <h4>3. Partilha</h4>
+                <p>Os dados só saem do dispositivo quando você usa a opção Partilhar, por exemplo num relatório ou na cópia de segurança. Nesse caso, o conteúdo é entregue à aplicação que escolher, como o WhatsApp ou o Google Drive.</p>
+                <h4>4. Terceiros</h4>
+                <p>A aplicação não usa anúncios nem ferramentas de análise, e não partilha dados com terceiros.</p>
+                <h4>5. Dados de outras pessoas</h4>
+                <p>Ao registar nomes e telefones de estudantes ou interessados, trate essa informação com respeito e com o conhecimento dessas pessoas.</p>
+                <h4>6. Eliminar os dados</h4>
+                <p>Pode eliminar cada registo dentro da aplicação, ou apagar tudo limpando os dados do site nas definições do navegador.</p>
+            </div>
+        </section>
+    </main>
+
+    <!-- Barra de Navegação Inferior -->
+    <nav id="bottom-nav">
+        <button id="nav-inicio" type="button" onclick="switchTab('inicio')" aria-label="Início" title="Início">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </button>
+    </nav>
+
+    <script src="app.js"></script>
+</body>
+</html>
