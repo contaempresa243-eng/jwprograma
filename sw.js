@@ -1,4 +1,5 @@
-const CACHE_NAME = 'jw-programa-v4';
+const CACHE_NAME = 'jw-programa-v5';
+const PREFIXO = 'jw-programa-'; // no GitHub Pages vários apps partilham a origem: só mexer nas caches deste
 const assets = [
   './',
   './index.html',
@@ -36,7 +37,7 @@ self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
       .then(keys => Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
+        keys.filter(k => k.startsWith(PREFIXO) && k !== CACHE_NAME).map(k => caches.delete(k))
       ))
       .then(() => self.clients.claim())
   );
