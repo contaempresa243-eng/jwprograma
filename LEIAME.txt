@@ -1,0 +1,19 @@
+JW PROGRAMA · APK ANDROID
+
+Acrescenta estes ficheiros ao repositório do JW Programa (na raiz, ao lado de index.html, app.js, style.css...):
+  package.json
+  capacitor.config.json
+  apk-bridge.js
+  android-extra/MainActivity.java
+  android-extra/JwNativePlugin.java
+  .github/workflows/apk.yml
+
+Chave de assinatura (uma vez): Settings > Secrets and variables > Actions > New repository secret
+  KEYSTORE_B64       (o mesmo valor que usaste no Batuque)
+  KEYSTORE_PASSWORD  (a mesma palavra-passe)
+
+Gerar: separador Actions > "Gerar APK do JW Programa" > Run workflow > no fim, descarregar "JW-Programa-APK".
+
+IMPORTANTE: os dados da app instalada (APK) são separados dos do site/PWA.
+Antes de usar o APK: no site, Configuração > Cópia de segurança > "Guardar ficheiro no telemóvel";
+no APK: Configuração > "Restaurar dados" e escolher esse ficheiro.
