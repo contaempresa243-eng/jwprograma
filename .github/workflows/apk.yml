@@ -61,7 +61,7 @@ jobs:
         run: |
           if [ -n "${{ secrets.KEYSTORE_B64 }}" ]; then
             echo "${{ secrets.KEYSTORE_B64 }}" | base64 -d > android/app/jw.keystore
-            SP="${{ secrets.KEYSTORE_PASSWORD }}"
+            SP=$(printf "%s" "${{ secrets.KEYSTORE_PASSWORD }}" | tr -d "\r\n ")
           else
             echo "AVISO: sem chave guardada, a usar chave temporária (não serve para atualizar a app)"
             SP="temporaria123"
