@@ -2,6 +2,8 @@ package com.aldair.jwprograma;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
@@ -58,13 +60,41 @@ public class JwNativePlugin extends Plugin {
         }).start();
     }
 
+    /* cores da janela e das barras: iguais ao fundo da app, para não aparecer nenhuma faixa */
+    private void paint(Window w, String bg, boolean on) {
+        try {
+            int cor = 0xFF1E3A8A;
+            if (bg != null && bg.length() > 0) cor = Color.parseColor(bg);
+            if (on) {
+                w.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+                w.setBackgroundDrawable(new ColorDrawable(cor));
+                w.setNavigationBarColor(Color.TRANSPARENT);
+                w.setStatusBarColor(Color.TRANSPARENT);
+                if (Build.VERSION.SDK_INT >= 29) w.setNavigationBarContrastEnforced(false);
+            } else {
+                w.clearFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+                w.setBackgroundDrawable(new ColorDrawable(0xFF1E3A8A));
+                w.setStatusBarColor(0xFF1E3A8A);
+            }
+        } catch (Exception ignored) { }
+    }
+
+    @PluginMethod
+    public void setWindowColor(PluginCall call) {
+        final String bg = call.getString("bg", "");
+        getActivity().runOnUiThread(() -> paint(getActivity().getWindow(), bg, true));
+        call.resolve();
+    }
+
     @PluginMethod
     public void setFullscreen(PluginCall call) {
         final boolean on = Boolean.TRUE.equals(call.getBoolean("on", false));
+        final String bg = call.getString("bg", "");
         getActivity().runOnUiThread(() -> {
             try {
                 Window w = getActivity().getWindow();
                 View decor = w.getDecorView();
+                paint(w, bg, on);
                 if (Build.VERSION.SDK_INT >= 28) {
                     WindowManager.LayoutParams lp = w.getAttributes();
                     lp.layoutInDisplayCutoutMode = on
