@@ -2,5 +2,13 @@
   "appId": "com.aldair.jwprograma",
   "appName": "JW Programa",
   "webDir": "www",
-  "android": { "allowMixedContent": false }
+  "android": {
+    "allowMixedContent": false
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_jw",
+      "iconColor": "#1e3a8a"
+    }
+  }
 }
