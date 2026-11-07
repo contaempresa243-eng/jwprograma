@@ -65,15 +65,28 @@
   try {
     Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: function () { return fsOn ? document.documentElement : null; } });
   } catch (e) {}
+  function fsBg() {
+    try { return rgbHex(getComputedStyle(document.body).backgroundColor); } catch (e) { return ''; }
+  }
+  function rgbHex(c) {
+    var m = /(\d+)\D+(\d+)\D+(\d+)/.exec(c || '');
+    if (!m) return '';
+    return '#' + [m[1], m[2], m[3]].map(function (n) { return ('0' + (+n).toString(16)).slice(-2); }).join('');
+  }
+  window.addEventListener('load', function () {
+    /* se o tema mudar com a tela cheia ligada, a cor da janela acompanha */
+    new MutationObserver(function () { if (fsOn) { try { JN.setWindowColor({ bg: fsBg() }); } catch (e) {} } })
+      .observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  });
   function fsPad(top) {
     var st = document.getElementById('apk-fs-style');
     if (!top) { if (st) st.remove(); return; }
     if (!st) { st = document.createElement('style'); st.id = 'apk-fs-style'; document.head.appendChild(st); }
-    st.textContent = 'header{padding-top:calc(15px + ' + top + 'px) !important}';
+    st.textContent = 'html{height:100%}body{height:100% !important}header{padding-top:calc(15px + ' + top + 'px) !important}';
   }
   async function fsSet(on) {
     fsOn = on;
-    try { var r = await JN.setFullscreen({ on: on }); fsPad(on ? ((r && r.top) || 28) : 0); } catch (e) {}
+    try { var r = await JN.setFullscreen({ on: on, bg: fsBg() }); fsPad(on ? ((r && r.top) || 28) : 0); } catch (e) {}
   }
   Element.prototype.requestFullscreen = function () { fsSet(true); return Promise.resolve(); };
   document.exitFullscreen = function () { fsSet(false); return Promise.resolve(); };
@@ -270,4 +283,25 @@
       }, 2500);
     });
   }
+
+  /* 7. Configuração: «proteção ao Chrome» não faz sentido no APK */
+  window.addEventListener('load', function () {
+    try {
+      var cfg = document.getElementById('configuracao');
+      if (!cfg) return;
+      cfg.querySelectorAll('h4.sec-label').forEach(function (h) {
+        if (!/Proteção do armazenamento/.test(h.textContent)) return;
+        h.textContent = 'Armazenamento';
+        var card = h.nextElementSibling;
+        if (!card) return;
+        Array.prototype.forEach.call(card.children, function (c) { c.style.display = 'none'; });
+        var p = document.createElement('p');
+        p.className = 'cal-hint'; p.style.marginTop = '0';
+        p.textContent = 'Neste aplicativo os dados ficam guardados dentro da própria app e o Android não os apaga sozinho. Só se perdem se desinstalar a app ou apagar os dados dela nas definições do Android. Faça sempre a cópia de segurança.';
+        card.appendChild(p);
+      });
+      var vi = cfg.querySelector('button[onclick*="verificarInstalacao"]');
+      if (vi) vi.style.display = 'none';
+    } catch (e) {}
+  });
 })();
