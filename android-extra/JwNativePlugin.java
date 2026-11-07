@@ -7,8 +7,10 @@ import android.os.Build;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.core.view.WindowInsetsControllerCompat;
@@ -62,18 +64,52 @@ public class JwNativePlugin extends Plugin {
         getActivity().runOnUiThread(() -> {
             try {
                 Window w = getActivity().getWindow();
-                if (on && Build.VERSION.SDK_INT >= 28) {
-                    w.getAttributes().layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                View decor = w.getDecorView();
+                if (Build.VERSION.SDK_INT >= 28) {
+                    WindowManager.LayoutParams lp = w.getAttributes();
+                    lp.layoutInDisplayCutoutMode = on
+                        ? WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                        : WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_DEFAULT;
+                    w.setAttributes(lp);
                 }
-                WindowInsetsControllerCompat c = WindowCompat.getInsetsController(w, w.getDecorView());
+                WindowInsetsControllerCompat c = WindowCompat.getInsetsController(w, decor);
                 if (on) {
+                    /* a app desenha por baixo das barras e do entalhe: nenhuma faixa fica por cobrir */
+                    WindowCompat.setDecorFitsSystemWindows(w, false);
+                    ViewCompat.setOnApplyWindowInsetsListener(decor, (v, insets) -> {
+                        /* com o teclado aberto, a app sobe para o campo de texto continuar visível */
+                        int ime = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+                        v.setPadding(0, 0, 0, insets.isVisible(WindowInsetsCompat.Type.ime()) ? ime : 0);
+                        return insets;
+                    });
                     c.setSystemBarsBehavior(WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
                     c.hide(WindowInsetsCompat.Type.systemBars());
                 } else {
                     c.show(WindowInsetsCompat.Type.systemBars());
+                    ViewCompat.setOnApplyWindowInsetsListener(decor, null);
+                    decor.setPadding(0, 0, 0, 0);
+                    WindowCompat.setDecorFitsSystemWindows(w, true);
                 }
-            } catch (Exception ignored) { }
+                ViewCompat.requestApplyInsets(decor);
+                /* altura da zona do topo (entalhe/barra de estado), em px CSS, para o cabeçalho não ficar por baixo */
+                float d = getContext().getResources().getDisplayMetrics().density;
+                WindowInsetsCompat ri = ViewCompat.getRootWindowInsets(decor);
+                int top = 0;
+                if (ri != null) {
+                    top = Math.max(
+                        ri.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.statusBars()).top,
+                        ri.getInsetsIgnoringVisibility(WindowInsetsCompat.Type.displayCutout()).top);
+                }
+                if (top == 0) {
+                    int id = getContext().getResources().getIdentifier("status_bar_height", "dimen", "android");
+                    if (id > 0) top = getContext().getResources().getDimensionPixelSize(id);
+                }
+                JSObject o = new JSObject();
+                o.put("top", Math.round(top / d));
+                call.resolve(o);
+            } catch (Exception e) {
+                call.resolve();
+            }
         });
-        call.resolve();
     }
 }
