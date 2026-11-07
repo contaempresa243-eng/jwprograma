@@ -65,16 +65,18 @@
   try {
     Object.defineProperty(document, 'fullscreenElement', { configurable: true, get: function () { return fsOn ? document.documentElement : null; } });
   } catch (e) {}
-  Element.prototype.requestFullscreen = function () {
-    fsOn = true;
-    try { JN.setFullscreen({ on: true }); } catch (e) {}
-    return Promise.resolve();
-  };
-  document.exitFullscreen = function () {
-    fsOn = false;
-    try { JN.setFullscreen({ on: false }); } catch (e) {}
-    return Promise.resolve();
-  };
+  function fsPad(top) {
+    var st = document.getElementById('apk-fs-style');
+    if (!top) { if (st) st.remove(); return; }
+    if (!st) { st = document.createElement('style'); st.id = 'apk-fs-style'; document.head.appendChild(st); }
+    st.textContent = 'header{padding-top:calc(15px + ' + top + 'px) !important}';
+  }
+  async function fsSet(on) {
+    fsOn = on;
+    try { var r = await JN.setFullscreen({ on: on }); fsPad(on ? ((r && r.top) || 28) : 0); } catch (e) {}
+  }
+  Element.prototype.requestFullscreen = function () { fsSet(true); return Promise.resolve(); };
+  document.exitFullscreen = function () { fsSet(false); return Promise.resolve(); };
 
   /* 5. Botão «voltar» do Android */
   if (App && App.addListener) {
